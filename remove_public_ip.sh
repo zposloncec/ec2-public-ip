@@ -14,8 +14,8 @@ fi
 
 #Variables
 instance_id=$1
-eip_id="eipalloc-0668b2779cd1c40e1"
-nic_id="eni-02e7fcfc6e5858cf6"
+eip_id=
+nic_id=
 
 # Get network interface id
 echo "Getting network interface for $instance_id"
