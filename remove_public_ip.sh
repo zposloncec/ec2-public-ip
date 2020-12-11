@@ -14,19 +14,23 @@ fi
 
 #Variables
 instance_id=$1
-eip_id=
-nic_id=
+eip_id="" 
 
 # Get network interface id
 echo "Getting network interface for $instance_id"
 network_interface_id=$(aws ec2 describe-instances  --instance-id $instance_id --output json | jq -r '.Reservations[].Instances[].NetworkInterfaces[].NetworkInterfaceId')
+subnet_id=$(aws ec2 describe-instances  --instance-id $instance_id --output json | jq -r '.Reservations[].Instances[].SubnetId')
+
+# Create TEMP NIC in the same subnet as instance
+nic_id=$(aws ec2 create-network-interface --subnet-id $subnet_id | jq -r '.NetworkInterface.NetworkInterfaceId')
+echo "Created temp nic with id $nic_id"
 
 # Apply Elastic IP
 echo "Applying EIP to $network_interface_id"
 aws ec2 associate-address --allocation-id $eip_id --network-interface-id $network_interface_id
 
 # Apply Network interface to the instance
-echo "Attaching additional network interface to $instance_id"
+echo "Attaching additional network interface $nic_id to $instance_id"
 aws ec2 attach-network-interface --network-interface-id $nic_id --instance-id $instance_id --device-index 1
 
 # Get network attachemnt id from instance
@@ -44,3 +48,9 @@ attachment_id=$(aws ec2 describe-instances  --instance-id $instance_id --output 
 # detach network interface
 echo "Detaching network interface $attachment_id"
 aws ec2 detach-network-interface --attachment-id $attachment_id
+
+sleep 5
+
+# Remove TEMP NIC
+echo "Removing TEMP NIC addapter $nic_id"
+aws ec2 delete-network-interface --network-interface-id $nic_id
